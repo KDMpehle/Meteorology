@@ -96,33 +96,34 @@ def blank_skewT(T0_DA = T0_DA, rs = rs_init,T0_SA = T0_SA, P0 = P0, Pf = Pf, n =
         ax.annotate('{}'.format(T0_SA[k]), (X_moist_adiabats[-2], P[-2]), color = 'g')
     return ax
 
-#a sample trace to plot
-P = np.array([900, 850, 800, 700, 600, 500])
-T = np.array([15, 11.8, 9.2, 2.6, 2, -5.3])
-Td = np.array([8.5,3.8,7.2, -2.4, -36.5, -50.3])
-T_lifted,P_new = lift_trace(T,Td,P, 150)
-Tw = wetbulb_trace(T, Td, P) #get wet bulb trace
-print(P_new)
-t = skewT(T, P)
-td = skewT(Td, P)
-tw = skewT(Tw, P)
-t_lifted = skewT(T_lifted,P_new)
-ax = blank_skewT()
-ax.plot(t, P, color = 'r')
-ax.plot(td, P, color = 'r')
-ax.plot(tw, P, color = 'g')
-#ax.plot(t_lifted,P_new,'-o',color = 'magenta')
-plt.show()
-    
- #20 degree saturated potential temperature adiabat test
-#n_sat = int(np.floor((P0-Pf)/2.))+1 # number of points for the saturated adiabats
-#P_sat = np.linspace(P0, Pf, n_sat) # get the standard pressure intervals
-#P = np.linspace(P0,Pf,n)
-#print(P_sat[0::50])
-#sat_adiabat = moist_adiabat(20, P_sat) # 20 degrees at 1000 hPa
-#print(len(sat_adiabat[0::50]))
-#X = skewT(sat_adiabat[0::50], P)
-#print(sat_adiabat[0::50],X)
+if __name__ == "__main__":  # an execution guard if importing to other scripts
+    #a sample trace to plot
+    P = np.array([900, 850, 800, 700, 600, 500])
+    T = np.array([15, 11.8, 9.2, 2.6, 2, -5.3])
+    Td = np.array([8.5,3.8,7.2, -2.4, -36.5, -50.3])
+    T_lifted,P_new = lift_trace(T,Td,P, 150)
+    Tw = wetbulb_trace(T, Td, P) #get wet bulb trace
+    #print(P_new)
+    t = skewT(T, P)
+    td = skewT(Td, P)
+    tw = skewT(Tw, P)
+    t_lifted = skewT(T_lifted,P_new)
+    ax = blank_skewT()
+    ax.plot(t, P, color = 'r')
+    ax.plot(td, P, color = 'r')
+    ax.plot(tw, P, color = 'g')
+    #ax.plot(t_lifted,P_new,'-o',color = 'magenta')
+    plt.show()
+        
+    #20 degree saturated potential temperature adiabat test
+    #n_sat = int(np.floor((P0-Pf)/2.))+1 # number of points for the saturated adiabats
+    #P_sat = np.linspace(P0, Pf, n_sat) # get the standard pressure intervals
+    #P = np.linspace(P0,Pf,n)
+    #print(P_sat[0::50])
+    #sat_adiabat = moist_adiabat(20, P_sat) # 20 degrees at 1000 hPa
+    #print(len(sat_adiabat[0::50]))
+    #X = skewT(sat_adiabat[0::50], P)
+    #print(sat_adiabat[0::50],X)
 
    
     
