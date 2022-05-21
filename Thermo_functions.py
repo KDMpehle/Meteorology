@@ -12,6 +12,8 @@ eps = 0.622 #g/g ratio of dry air specifc gas const to moist gas const.
 Lv = 2.5E6 #Latent heat of vaporisation
 Cp = 1003.5 #Specific heat capcity of dry air at constant pressure in Jkg-1K-1
 Rd = 287.058 # The specific gas constant of dry air in Jkg-1K-1 
+g = 9.8 # gravitational acceleration in m/s/s
+rhol = 1000 # the rough density of liquid water in kg/m^3
 
 # Calculate the Saturation vapour pressure
 def vapour_pres_sat(T):
@@ -64,7 +66,7 @@ def mix_ratio_sat(P, T):
 
 def mix_ratio(P,Td):
     '''
-    Function to calculate the saturation mixing at a particular pressure and
+    Function to calculate the mixing at a particular pressure and
     dew point.
     -----
     input:
@@ -114,7 +116,7 @@ def dry_adiabats(T0, P0 = 1050., Pf = 100., n = 50) :
     adiabat curves.
     '''
     P = np.linspace(P0, Pf, n)
-    print(len(T0))
+    #print(len(T0))
     T= np.zeros((m, n)) # initialise array to hold the adiabats
     for k in range(len(T0)):
         T[k,:] = T0[k] * (P[:] / P[0])**3.496  #the 3.496 is Cp/R = 1003.5 / 287.06
@@ -174,8 +176,9 @@ def Tlcl_eqn(T,Td,P):
 
 def find_Tlcl(T,Td,P):
     '''
-    Implements the root finding procedure to find the lcl and associated 
-    pressure level
+    Finds the Lcl temperature and pressure using Bolton's formula. Written
+    to be adapted to a root finding approach if ever need( don't think so,
+    Bolton's formula already so accurate)
     -----
     input:
     T: Temperature in celcius. Must be given as a scalar
@@ -187,7 +190,7 @@ def find_Tlcl(T,Td,P):
     '''
     F, e, r, T = Tlcl_eqn(T,Td,P) # Get eqn, e, r and kelvin temp
     Tl = 55 + 2840 / (3.5 * np.log(T) -np.log(e) -4.805) # initial guess
-    print(Tl)
+    #print(Tl)
     #Tl = scipy.optimize.fsolve(F, Tl0)[0] # find the lcl temperature
     #Now use Poisson's formula to find the pressure level
     Pl = P * (Tl/T)**3.496  # the 3.496 is Cp/R = 1003.5 / 287.06
@@ -261,6 +264,7 @@ def wetbulb_trace(T, Td, P, dP = 2.):
     temperatures, so I simply lift to the LCL then descend down a saturated adiabat
     back to the original pressure.
     -----
+    input:
     T: Array of temperatures in sounding data. given as a one dimensional
     array (1,n) [adapt for scalars?]
     Td: Array of dew points in sounding data. 1D array (1,n).
@@ -273,7 +277,7 @@ def wetbulb_trace(T, Td, P, dP = 2.):
     temperature
     '''
     Tw = np.zeros(len(T)) # initialise the wetbulb trace array.
-    print(Tw)
+    #print(Tw)
     for k in range(len(T)):
         Tlcl, Plcl = find_Tlcl(T[k], Td[k], P[k])
         n_steps = int(np.floor((P[k]-Plcl) / dP)) + 1 # number of steps for saturated adiabats
@@ -282,5 +286,21 @@ def wetbulb_trace(T, Td, P, dP = 2.):
         T_satcurve = moist_adiabat(Tlcl, P_vals)
         Tw[k] = T_satcurve[-1] # The final temperature gives the wetbul temperature. 
     return Tw
+def precip_water(T, Td, P):
+    '''
+    Calculates the precipitable water through a trace. Numerical method
+    utilised is the trapezoidal rule as implemented in numpy.
+    -----
+    input:
+    T: Array of temperatures in sounding data. given as a one dimensional
+    array (1,n).
+    Td: Array of dew points in sounding data. 1D array (1,n).
+    P: Array of pressures in the sounding data. 1D array (1,n).
+    -----
+    output:
+    Pw: The precipitable water in mm. A sclar
+    '''
+    r = mix_ratio(P, Td) # calculate the mixing ratio of each data point
+    return -np.trapz(r, x = P) / (rhol * g) # negative sign is to get positive result since we integrate from bottom to top of the atm.
 
             
