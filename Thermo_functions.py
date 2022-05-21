@@ -210,9 +210,7 @@ def moist_adiabat(Ti,P_vals):
     n: The number of points on the saturated adiabat curve
     -----
     output:
-    saturated adibatic. a 2 x n array holding the temperature values in the 
-    first row (in degrees celcius) and the pressure values in the second row
-    (in hPa).
+    T_vals: temperature in degrees celcius. What about the actual pressures? if you want to plot it.
     '''
     #P_vals = np.linspace(Pi,Pf,n) # get the array of P_Vals
     T_vals = np.zeros(len(P_vals))
@@ -303,4 +301,56 @@ def precip_water(T, Td, P):
     r = mix_ratio(P, Td) # calculate the mixing ratio of each data point
     return -np.trapz(r, x = P) / (rhol * g) # negative sign is to get positive result since we integrate from bottom to top of the atm.
 
-            
+def theta_E( T, Td, P):
+    '''
+    Calculates the equivalent potential temperature of a give parcel ( or entire trace)
+    utilising the formula given by (Bolton, 1980).
+    -----
+    input:
+    T: Temperature. 1D array (1,n) or scalar.
+    Td: dewpoint temperature. 1D array (1,n) or scalar.
+    P: Pressure. 1D array (1,n) or scalar.
+    -----
+    output:
+    theta_E: the equivalent potential temperature. 1D array (1,n) or scalar.
+    '''
+   Tl = 55 + 2840 / (3.5 * np.log(T) - np.log(e) - 4.805)# first get the LCL temperature in Kelvin
+   Tc = T + 273.15 # convert the temperature to units of kelvin
+   r = mix_ratio(P, Td) / 1000 # get the mixing ratio ( in kg/kg)
+   theta_DL = Tc * (1000 / P) ** ( 0.2854 * ( 1 - 0.28 * r ) ) #theta_DL in Bolton, kind of like the potential temperature at the LCL
+   exponential_factor = np.exp(r * ( 1 + 0.81 * r ) * ( 3376 / Tl - 2.54 ))
+   theta_SE = theta_DL * exponential_factor
+   return theta_SE 
+
+def parcel_profile(T0, Td0, P0, Pf, dP_dry = 5., dP_sat = 2.):
+    '''
+    calculates the profile of a given parcel (T, Td) as it moves from P0 to Pf
+    -----
+    input:
+    T0: parcel temperature in [units]. given as scalar.
+    Td0: parcel dewpoint in [units]. Given as scalar.
+    P0: initial pressure in hPa. Given as scalar.
+    Pf: final pressure in hPa. Given as scalar.
+    dP_dry: Pressure increments to produce parcel dry curves.
+    dP_sat: Pressure increments to produce parcel saturated curves
+    '''
+    Tlcl, Plcl = find_Tlcl(T0, Td0, P0) # first get the LCL.
+    n_dry = int(np.floor((P0 - Plcl) / dP_dry)) + 1 # number of points for the dry adiabats
+    P_dry = np.linspace(P0, Plcl, n_dry): # how many points do I want for the dry lifting?
+    r = mix_ratio(P0, Td0) / 1000 # get the mixing ratio of the parcel in kg/kg
+    T0 += 273.15 # convert to kelvin for the dry adiabat calculation.
+    Td_dry = isohume(P_array_dry, r)
+    T_dry = T0 * (P_array_dry / P0)**3.496 # calculate the dry adiabat
+    T_dry -= 273.15 #
+    if Plcl >= Pf: # only a dry adiabatic lift
+        return T_dry, Td_dry, P_dry
+    else:
+        n_sat = int(np.floor(Plcl - Pf) / dP_sat) + 1 # number of points for the saturated 
+        P_sat = np.linspace(Plcl, Pf, n_sat)
+        T_sat = moist_adiabat(Tlcl, P_sat) # calculate the temperatures of the moist adiabat
+        T_sat = T_sat[1:] # 
+        Td_sat = np.copy(T_sat) # make copy for the dew point array. This will mean one less variable is returned
+        P_parcel_profile= np.concatenate([P_dry, P_sat[1:]])
+        T_parcel_profile = np.concatenate([T_dry, T_sat])
+        Td_parcel_profile = np.concatenate([Td_dry, Td_sat])
+        return T_parcel_profile, Td_parcel_profile, P_parcel_profile
