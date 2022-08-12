@@ -15,8 +15,8 @@ from Thermo_functions import *
 T0_DA = [n* 10 for n in range(-10,8)] #P0 temperatures for the dry adiabats
 T0_SA = [n*5 for n in range(-4,9)] #P0 temperatures of the saturated adiabats
 rs_init = [0.1, 0.4, 1, 2, 3, 5, 8, 12, 20] 
-P0 = 1050 # in hPa, the lowest pressure height
-Pf = 100 # in hPa, the highest pressure height 
+P0 = 1050. # in hPa, the lowest pressure height
+Pf = 100. # in hPa, the highest pressure height 
 rotation = 35
 n = int(np.floor((P0-Pf)/50.))+1 # number of points in the dry adiabats
 #Define the transform for the skewT variable
@@ -98,21 +98,35 @@ def blank_skewT(T0_DA = T0_DA, rs = rs_init,T0_SA = T0_SA, P0 = P0, Pf = Pf, n =
 
 if __name__ == "__main__":  # an execution guard if importing to other scripts
     #a sample trace to plot
-    P = np.array([900, 850, 800, 700, 600, 500])
-    T = np.array([15, 11.8, 9.2, 2.6, 2, -5.3])
-    Td = np.array([8.5,3.8,7.2, -2.4, -36.5, -50.3])
-    T_lifted,P_new = lift_trace(T,Td,P, 150)
+   # P = np.array([900, 850, 800, 700, 600, 500])
+   # T = np.array([15, 11.8, 9.2, 2.6, 2, -5.3])
+   # Td = np.array([8.5,3.8,7.2, -2.4, -36.5, -50.3])
+   # From the YBBN trace  00Z 11/08/2022
+    P = np.array([904., 850., 700., 592., 400., 300.])
+    T = np.array([9, 5.2, 5.0, -1.5, -22.7, -35.5])
+    Td = np.array([1.0, 1.7, -12.0, -9.5, -29.7,-54.5])
+    wind_str = np.array([15, 11, 8,36, 59, 93])
+    wind_dirc = np.array([107, 100, 255, 264, 255, 270])
+    u = -wind_str * np.sin(np.pi * wind_dirc / 180)
+    v = -wind_str * np.cos( np.pi * wind_dirc / 180) 
+    T_lifted,Td_lifted,P_new = lift_trace(T,Td,P, 50)
     Tw = wetbulb_trace(T, Td, P) #get wet bulb trace
     #print(P_new)
     t = skewT(T, P)
     td = skewT(Td, P)
     tw = skewT(Tw, P)
     t_lifted = skewT(T_lifted,P_new)
+    td_lifted = skewT(Td_lifted, P_new)
     ax = blank_skewT()
     ax.plot(t, P, color = 'r')
     ax.plot(td, P, color = 'r')
     ax.plot(tw, P, color = 'g')
-    #ax.plot(t_lifted,P_new,'-o',color = 'magenta')
+    #plot the wind barbs by first creating a mesh for the barbs
+    x_loc = 45 # just set this arbitrariliy as close to the right edge of the aerological diagramm 
+    ax.barbs(x_loc*np.ones(len(P)), P , u, v, clip_on = False)
+
+    ax.plot(t_lifted,P_new,'-o',color = 'magenta')
+    ax.plot(td_lifted,P_new, '-o', color = 'magenta')
     plt.show()
         
     #20 degree saturated potential temperature adiabat test
@@ -125,5 +139,4 @@ if __name__ == "__main__":  # an execution guard if importing to other scripts
     #X = skewT(sat_adiabat[0::50], P)
     #print(sat_adiabat[0::50],X)
 
-   
-    
+       

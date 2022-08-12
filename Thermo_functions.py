@@ -91,7 +91,7 @@ def isohume(P,r):
     rs: The mixing ratio desired. Given in g/g (?)
     -----
     output:
-    Temperature in degreess celsius. Same shape as the inputted pressure. 
+    dewpoint in degreess celsius. Same shape as the inputted pressure. 
     '''
     eps = 0.622 
     a = 6.1094 # constants for the August-Roche-Magnus formula
@@ -239,21 +239,27 @@ def lift_trace(T, Td, P, DeltaP):
     enter as positive number(lift by 100 mb means DeltaP = 100)
     -----
     output: 
-    T_lifted: Array of the lifted the temperatures
-    P_lifted: Corresponding array of pressures.
+    T_new: Array of the lifted temperatures
+    Td_new: Array of the lifted dewpoints
+    P_ne
+w: Corresponding array of pressures.
     '''
     #list to hold initial conditions for the saturated lifting
     P_new = P - DeltaP # get the new 
     T_new = np.zeros(len(T))
+    Td_new = np.zeros(len(T))
     for k in range(len(T)): 
         Tlcl, Plcl = find_Tlcl(T[k],Td[k],P[k]) # get the lcl quantities
         if P_new[k] >= Plcl:
             T_new[k] = (T[k] + 273.15) * (P_new[k] / P[k])**0.286 - 273.15 #Dry adiabat lift to new level.
+            r = mix_ratio(P[k], Td[k]) # get the mixing ratio assumed constant
+            Td_new[k] = isohume(P_new[k], r) # The lifted dewpoint pre-saturation
         else: # if the parcel saturates before lifting is over, finish on Saturated adiabat
             P_interval = np.linspace(Plcl, P_new[k],100) # figure out the interval size later
             T_satcurve = moist_adiabat(Tlcl,P_interval)
             T_new[k] = T_satcurve[-1] # only interested final temp after
-    return T_new, P_new # return the new temperatures and 
+            Td_new[k] = T_satcurve[-1] # Dewpoint equals temperature in saturation.
+    return T_new, Td_new , P_new # return the new temperatures and 
 
 def wetbulb_trace(T, Td, P, dP = 2.):
     '''
@@ -314,13 +320,13 @@ def theta_E( T, Td, P):
     output:
     theta_E: the equivalent potential temperature. 1D array (1,n) or scalar.
     '''
-   Tl = 55 + 2840 / (3.5 * np.log(T) - np.log(e) - 4.805)# first get the LCL temperature in Kelvin
-   Tc = T + 273.15 # convert the temperature to units of kelvin
-   r = mix_ratio(P, Td) / 1000 # get the mixing ratio ( in kg/kg)
-   theta_DL = Tc * (1000 / P) ** ( 0.2854 * ( 1 - 0.28 * r ) ) #theta_DL in Bolton, kind of like the potential temperature at the LCL
-   exponential_factor = np.exp(r * ( 1 + 0.81 * r ) * ( 3376 / Tl - 2.54 ))
-   theta_SE = theta_DL * exponential_factor
-   return theta_SE 
+    Tl = 55 + 2840 / (3.5 * np.log(T) - np.log(e) - 4.805)# first get the LCL temperature in Kelvin
+    Tc = T + 273.15 # convert the temperature to units of kelvin
+    r = mix_ratio(P, Td) / 1000 # get the mixing ratio ( in kg/kg)
+    theta_DL = Tc * (1000 / P) ** ( 0.2854 * ( 1 - 0.28 * r ) ) #theta_DL in Bolton, kind of like the potential temperature at the LCL
+    exponential_factor = np.exp(r * ( 1 + 0.81 * r ) * ( 3376 / Tl - 2.54 ))
+    theta_SE = theta_DL * exponential_factor
+    return theta_SE 
 
 def parcel_profile(T0, Td0, P0, Pf, dP_dry = 5., dP_sat = 2.):
     '''
@@ -336,7 +342,7 @@ def parcel_profile(T0, Td0, P0, Pf, dP_dry = 5., dP_sat = 2.):
     '''
     Tlcl, Plcl = find_Tlcl(T0, Td0, P0) # first get the LCL.
     n_dry = int(np.floor((P0 - Plcl) / dP_dry)) + 1 # number of points for the dry adiabats
-    P_dry = np.linspace(P0, Plcl, n_dry): # how many points do I want for the dry lifting?
+    P_dry = np.linspace(P0, Plcl, n_dry) # how many points do I want for the dry lifting?
     r = mix_ratio(P0, Td0) / 1000 # get the mixing ratio of the parcel in kg/kg
     T0 += 273.15 # convert to kelvin for the dry adiabat calculation.
     Td_dry = isohume(P_array_dry, r)
@@ -349,7 +355,7 @@ def parcel_profile(T0, Td0, P0, Pf, dP_dry = 5., dP_sat = 2.):
         P_sat = np.linspace(Plcl, Pf, n_sat)
         T_sat = moist_adiabat(Tlcl, P_sat) # calculate the temperatures of the moist adiabat
         T_sat = T_sat[1:] # 
-        Td_sat = np.copy(T_sat) # make copy for the dew point array. This will mean one less variable is returned
+        Td_sat = np.copy(T_sat) # make copy for the dew point array. Make a copy so one less Pressure array needs to be created
         P_parcel_profile= np.concatenate([P_dry, P_sat[1:]])
         T_parcel_profile = np.concatenate([T_dry, T_sat])
         Td_parcel_profile = np.concatenate([Td_dry, Td_sat])
